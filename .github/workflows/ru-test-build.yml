@@ -52,5 +52,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: codexbar-ru
-          path: apps/desktop-tauri/src-tauri/target/release/*.exe
+          path: target/release/*.exe
           retention-days: 7
