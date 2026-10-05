@@ -4,6 +4,7 @@
 
 use super::*;
 use crate::notifications::NotificationType;
+use crate::settings::Language;
 use chrono::TimeZone;
 
 const CLI_UNKNOWN: &str = "claude:cli:unknown";
@@ -83,9 +84,9 @@ fn run_samples(samples: &[Sample], lane: Lane) -> Vec<u32> {
     toasts
         .iter()
         .map(|toast| {
-            if toast.starts_with(NotificationType::CriticalUsage.title()) {
+            if toast.starts_with(&NotificationType::CriticalUsage.title(Language::English)) {
                 20
-            } else if toast.starts_with(NotificationType::HighUsage.title()) {
+            } else if toast.starts_with(&NotificationType::HighUsage.title(Language::English)) {
                 50
             } else {
                 panic!("unexpected toast {toast}")
@@ -277,7 +278,9 @@ fn session_depleted_state_follows_the_merged_account() {
         .toasts
         .borrow()
         .iter()
-        .filter(|toast| toast.starts_with(NotificationType::SessionDepleted.title()))
+        .filter(|toast| {
+            toast.starts_with(&NotificationType::SessionDepleted.title(Language::English))
+        })
         .count();
     assert_eq!(depleted, 1, "depleted toast must not repeat after merge");
 }
