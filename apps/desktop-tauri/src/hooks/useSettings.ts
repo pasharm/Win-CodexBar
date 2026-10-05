@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import type { SettingsSnapshot, SettingsUpdate } from "../types/bridge";
 import { getSettingsSnapshot, updateSettings } from "../lib/tauri";
@@ -8,6 +8,17 @@ interface UseSettingsReturn {
   saving: boolean;
   error: string | null;
   update: (patch: SettingsUpdate) => Promise<void>;
+}
+
+const SAVING_INDICATOR_DELAY_MS = 300;
+
+/** Copies the patch fields that also exist in the snapshot (write-only fields are skipped). */
+function applyPatch(current: SettingsSnapshot, patch: SettingsUpdate): SettingsSnapshot {
+  const next: Record<string, unknown> = { ...current };
+  for (const [key, value] of Object.entries(patch)) {
+    if (value !== undefined && key in current) next[key] = value;
+  }
+  return next as unknown as SettingsSnapshot;
 }
 
 /**
@@ -73,11 +84,35 @@ export function useSettings(initial: SettingsSnapshot): UseSettingsReturn {
     };
   }, []);
 
+  // `saving` disables every control on the tab, which dims them to 50%
+  // opacity. A local save finishes in a few milliseconds, so raising the flag
+  // immediately made the whole tab blink on every checkbox click. Only report
+  // `saving` once a save has been pending for a noticeable time.
+  const [pending, setPending] = useState(0);
+  useEffect(() => {
+    if (pending === 0) {
+      setSaving(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setSaving(true), SAVING_INDICATOR_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [pending]);
+
+  // Responses of overlapping saves may arrive out of order; only the latest
+  // one is applied so an older snapshot cannot undo a newer change.
+  const latestRequest = useRef(0);
+
   const update = useCallback(async (patch: SettingsUpdate) => {
-    setSaving(true);
+    const request = ++latestRequest.current;
+    setPending((n) => n + 1);
     setError(null);
+    // Show the change right away instead of waiting for the round trip: the
+    // controls are controlled, so without this a checkbox flips only after
+    // the shell answers.
+    setSettings((current) => applyPatch(current, patch));
     try {
       const next = await updateSettings(patch);
+      if (request !== latestRequest.current) return;
       setSettings(next);
       if (typeof window !== "undefined") {
         window.dispatchEvent(
@@ -97,7 +132,7 @@ export function useSettings(initial: SettingsSnapshot): UseSettingsReturn {
         // ignore secondary failure
       }
     } finally {
-      setSaving(false);
+      setPending((n) => n - 1);
     }
   }, []);
 

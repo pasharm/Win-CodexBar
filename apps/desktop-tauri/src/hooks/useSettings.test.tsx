@@ -69,3 +69,102 @@ describe("useSettings live sync", () => {
     await waitFor(() => expect(unlisten).toHaveBeenCalledTimes(1));
   });
 });
+
+describe("useSettings update", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    tauriMocks.getSettingsSnapshot.mockResolvedValue(snapshot(100));
+  });
+
+  const deferred = <T,>() => {
+    let resolve!: (value: T) => void;
+    const promise = new Promise<T>((r) => {
+      resolve = r;
+    });
+    return { promise, resolve };
+  };
+
+  it("applies the patch before the shell answers and keeps saving off for a fast save", async () => {
+    const pending = deferred<SettingsSnapshot>();
+    tauriMocks.updateSettings.mockReturnValueOnce(pending.promise);
+    const initial = snapshot(100);
+    const { result } = renderHook(() => useSettings(initial));
+    // Let the bootstrap snapshot fetch settle so it cannot overwrite the update.
+    await act(async () => {});
+
+    let done!: Promise<void>;
+    act(() => {
+      done = result.current.update({ windowScalePercent: 150 });
+    });
+
+    expect(result.current.settings.windowScalePercent).toBe(150);
+    expect(result.current.saving).toBe(false);
+
+    await act(async () => {
+      pending.resolve(snapshot(150));
+      await done;
+    });
+    expect(result.current.settings.windowScalePercent).toBe(150);
+    expect(result.current.saving).toBe(false);
+  });
+
+  it("reports saving only once a save is slow", async () => {
+    vi.useFakeTimers();
+    try {
+      const pending = deferred<SettingsSnapshot>();
+      tauriMocks.updateSettings.mockReturnValueOnce(pending.promise);
+      const initial = snapshot(100);
+      const { result } = renderHook(() => useSettings(initial));
+
+      let done!: Promise<void>;
+      act(() => {
+        done = result.current.update({ windowScalePercent: 150 });
+      });
+      expect(result.current.saving).toBe(false);
+
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+      expect(result.current.saving).toBe(true);
+
+      await act(async () => {
+        pending.resolve(snapshot(150));
+        await done;
+      });
+      expect(result.current.saving).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("ignores a stale response that arrives after a newer save", async () => {
+    const first = deferred<SettingsSnapshot>();
+    const second = deferred<SettingsSnapshot>();
+    tauriMocks.updateSettings
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise);
+    const initial = snapshot(100);
+    const { result } = renderHook(() => useSettings(initial));
+    await act(async () => {});
+
+    let a!: Promise<void>;
+    let b!: Promise<void>;
+    act(() => {
+      a = result.current.update({ windowScalePercent: 125 });
+    });
+    act(() => {
+      b = result.current.update({ windowScalePercent: 150 });
+    });
+
+    await act(async () => {
+      second.resolve(snapshot(150));
+      await b;
+    });
+    await act(async () => {
+      first.resolve(snapshot(125));
+      await a;
+    });
+
+    expect(result.current.settings.windowScalePercent).toBe(150);
+  });
+});
