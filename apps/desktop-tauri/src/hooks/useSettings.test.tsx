@@ -137,6 +137,25 @@ describe("useSettings update", () => {
     }
   });
 
+  it("merges a per-provider accent color patch instead of replacing the map", async () => {
+    tauriMocks.updateSettings.mockReturnValueOnce(new Promise(() => {}));
+    const initial = {
+      providerAccentColors: { claude: "#111111", codex: "#222222" },
+    } as unknown as SettingsSnapshot;
+    tauriMocks.getSettingsSnapshot.mockResolvedValue(initial);
+    const { result } = renderHook(() => useSettings(initial));
+    await act(async () => {});
+
+    act(() => {
+      void result.current.update({ providerAccentColors: { claude: null, grok: "#333333" } });
+    });
+
+    expect(result.current.settings.providerAccentColors).toEqual({
+      codex: "#222222",
+      grok: "#333333",
+    });
+  });
+
   it("ignores a stale response that arrives after a newer save", async () => {
     const first = deferred<SettingsSnapshot>();
     const second = deferred<SettingsSnapshot>();

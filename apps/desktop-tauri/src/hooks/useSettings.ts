@@ -18,6 +18,16 @@ function applyPatch(current: SettingsSnapshot, patch: SettingsUpdate): SettingsS
   for (const [key, value] of Object.entries(patch)) {
     if (value !== undefined && key in current) next[key] = value;
   }
+  // Accent colors are sent as a per-provider merge patch (`null` clears one
+  // provider), not as the full map.
+  if (patch.providerAccentColors) {
+    const colors: Record<string, string> = { ...current.providerAccentColors };
+    for (const [id, color] of Object.entries(patch.providerAccentColors)) {
+      if (color === null) delete colors[id];
+      else colors[id] = color;
+    }
+    next.providerAccentColors = colors;
+  }
   return next as unknown as SettingsSnapshot;
 }
 
