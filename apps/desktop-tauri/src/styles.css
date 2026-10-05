@@ -5266,6 +5266,20 @@ html:has(.menu-surface--tray) {
   max-width: 560px;
   margin: 6px auto 0;
 }
+.settings-status-slot {
+  position: relative;
+  z-index: 5;
+}
+.settings-status--floating {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 6px 0 0;
+  white-space: nowrap;
+  background: var(--app-bg);
+  box-shadow: inset 0 0 0 100vmax rgba(10, 132, 255, 0.08), 0 2px 8px rgba(0, 0, 0, 0.25);
+}
 
 /* ── Grouped form (SwiftUI Form .grouped) ─────────────────────────── */
 .settings-section {

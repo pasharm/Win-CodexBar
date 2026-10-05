@@ -227,14 +227,17 @@ export default function Settings({ state, initialTab: propTab }: { state: Bootst
         ))}
       </nav>
 
-      {/* status bar */}
-      {(saving || error) && (
-        <div
-          className={`settings-status ${error ? "settings-status--error" : ""}`}
-        >
-          {saving ? t("SettingsStatusSaving") : error}
-        </div>
-      )}
+      {/* status bar – the transient "Saving…" note overlays the tab body so it
+          never shifts the layout; an error stays in flow so it hides nothing */}
+      <div className="settings-status-slot">
+        {(saving || error) && (
+          <div
+            className={`settings-status ${error ? "settings-status--error" : "settings-status--floating"}`}
+          >
+            {saving ? t("SettingsStatusSaving") : error}
+          </div>
+        )}
+      </div>
 
       {/* tab panels */}
       <div className={`settings-body${activeTab === "providers" ? " settings-body--providers" : ""}`}>
