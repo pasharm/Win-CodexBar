@@ -772,7 +772,7 @@ mod tests {
                 NotificationType::HighUsage,
                 Language::Russian,
             ),
-            "Claude (неделя): использовано 86% — лимит близко"
+            "Claude (неделя): использовано 86% — лимит почти исчерпан"
         );
         // Unknown windows pass through untranslated instead of falling back.
         assert_eq!(
