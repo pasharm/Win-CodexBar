@@ -2,6 +2,8 @@ name: ru test build
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ci/ru-test-build]
 
 permissions:
   contents: read
