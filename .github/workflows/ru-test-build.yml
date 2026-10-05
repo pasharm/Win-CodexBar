@@ -1,0 +1,62 @@
+name: ru test build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ci/ru-test-build, ci/usage-toasts-build]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+          components: rustfmt, clippy
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            rust
+            apps/desktop-tauri/src-tauri
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          package_json_file: apps/desktop-tauri/package.json
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.18.0
+          cache: pnpm
+          cache-dependency-path: apps/desktop-tauri/pnpm-lock.yaml
+
+      - name: Locale tests
+        run: |
+          cargo test --manifest-path rust/Cargo.toml locale
+          cargo test --manifest-path rust/Cargo.toml notifications
+          cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings
+          cargo fmt --all -- --check
+          node apps/desktop-tauri/scripts/check-locale-drift.mjs
+
+      - name: Install frontend deps
+        run: pnpm --dir apps/desktop-tauri install --frozen-lockfile
+
+      - name: Build app
+        run: pnpm --dir apps/desktop-tauri tauri:build
+
+      - name: Upload exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: codexbar-ru
+          path: target/release/*.exe
+          retention-days: 7
