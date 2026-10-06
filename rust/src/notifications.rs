@@ -85,15 +85,18 @@ struct PredictiveWarningKey {
 }
 
 impl NotificationType {
-    pub fn title(&self) -> &'static str {
-        match self {
-            NotificationType::HighUsage => "High Usage Warning",
-            NotificationType::CriticalUsage => "Critical Usage Alert",
-            NotificationType::Exhausted => "Usage Limit Reached",
-            NotificationType::StatusIssue => "Provider Status Issue",
-            NotificationType::SessionDepleted => "Session Depleted",
-            NotificationType::SessionRestored => "Session Restored",
-        }
+    pub fn title(&self, language: crate::settings::Language) -> String {
+        locale::get_text(
+            language,
+            match self {
+                NotificationType::HighUsage => LocaleKey::NotificationHighUsageTitle,
+                NotificationType::CriticalUsage => LocaleKey::NotificationCriticalUsageTitle,
+                NotificationType::Exhausted => LocaleKey::NotificationExhaustedTitle,
+                NotificationType::StatusIssue => LocaleKey::NotificationStatusIssueTitle,
+                NotificationType::SessionDepleted => LocaleKey::NotificationSessionDepletedTitle,
+                NotificationType::SessionRestored => LocaleKey::NotificationSessionRestoredTitle,
+            },
+        )
     }
 
     pub fn icon(&self) -> &'static str {
@@ -406,12 +409,13 @@ impl NotificationManager {
 
         // Check for depleted transition: was not depleted, now is
         if previous_percent < DEPLETED_THRESHOLD && current_percent >= DEPLETED_THRESHOLD {
-            let title = NotificationType::SessionDepleted.title();
-            let body = format!(
-                "{} session depleted. 0% left. Will notify when available again.",
-                provider.display_name()
+            let title = NotificationType::SessionDepleted.title(settings.ui_language);
+            let body = locale::format_locale(
+                settings.ui_language,
+                LocaleKey::NotificationSessionDepletedBody,
+                &[provider.display_name()],
             );
-            self.show_toast(title, &body);
+            self.show_toast(&title, &body);
             Self::play_notification_sound(NotificationSoundEvent::SessionDepleted, settings);
             self.sent_notifications.insert((
                 provider,
@@ -430,12 +434,13 @@ impl NotificationManager {
                 NotificationType::SessionDepleted,
             );
             if self.sent_notifications.contains(&depleted_key) {
-                let title = NotificationType::SessionRestored.title();
-                let body = format!(
-                    "{} session restored. Session quota is available again.",
-                    provider.display_name()
+                let title = NotificationType::SessionRestored.title(settings.ui_language);
+                let body = locale::format_locale(
+                    settings.ui_language,
+                    LocaleKey::NotificationSessionRestoredBody,
+                    &[provider.display_name()],
                 );
-                self.show_toast(title, &body);
+                self.show_toast(&title, &body);
                 Self::play_notification_sound(NotificationSoundEvent::SessionRestored, settings);
                 self.sent_notifications.remove(&depleted_key);
             }
@@ -455,19 +460,26 @@ impl NotificationManager {
         notif_type: NotificationType,
         settings: &Settings,
     ) {
-        let title = notif_type.title();
-        let body = Self::notification_body(provider, window, used_percent, notif_type);
-        self.show_toast(title, &body);
+        let title = notif_type.title(settings.ui_language);
+        let body = Self::notification_body(
+            provider,
+            window,
+            used_percent,
+            notif_type,
+            settings.ui_language,
+        );
+        self.show_toast(&title, &body);
         Self::play_notification_sound(Self::sound_event_for(notif_type), settings);
     }
 
-    fn window_label(window: &str) -> &str {
-        match window {
-            "session" => "session",
-            "weekly" => "weekly",
-            other if !other.is_empty() => other,
-            _ => "usage",
-        }
+    fn window_label(window: &str, language: crate::settings::Language) -> String {
+        let key = match window {
+            "session" => LocaleKey::NotificationWindowSession,
+            "weekly" => LocaleKey::NotificationWindowWeekly,
+            other if !other.is_empty() => return other.to_string(),
+            _ => LocaleKey::NotificationWindowUsage,
+        };
+        locale::get_text(language, key)
     }
 
     fn notification_body(
@@ -475,31 +487,30 @@ impl NotificationManager {
         window: &str,
         used_percent: f64,
         notif_type: NotificationType,
+        language: crate::settings::Language,
     ) -> String {
         let provider_name = provider.display_name();
-        let window_label = Self::window_label(window);
-        match notif_type {
-            NotificationType::HighUsage => {
-                format!(
-                    "{provider_name} {window_label} usage at {used_percent:.0}% - approaching limit"
-                )
-            }
+        let window_label = Self::window_label(window, language);
+        let percent = format!("{used_percent:.0}");
+        let usage_args = [provider_name, window_label.as_str(), percent.as_str()];
+        let provider_args = [provider_name];
+        let (key, args): (LocaleKey, &[&str]) = match notif_type {
+            NotificationType::HighUsage => (LocaleKey::NotificationHighUsageBody, &usage_args),
             NotificationType::CriticalUsage => {
-                format!(
-                    "{provider_name} {window_label} usage at {used_percent:.0}% - critically high!"
-                )
+                (LocaleKey::NotificationCriticalUsageBody, &usage_args)
             }
-            NotificationType::Exhausted => {
-                format!("{provider_name} {window_label} usage limit exhausted ({used_percent:.0}%)")
+            NotificationType::Exhausted => (LocaleKey::NotificationExhaustedBody, &usage_args),
+            NotificationType::StatusIssue => {
+                (LocaleKey::NotificationStatusIssueBody, &provider_args)
             }
-            NotificationType::StatusIssue => format!("{provider_name} is experiencing issues"),
             NotificationType::SessionDepleted => {
-                format!("{provider_name} session depleted. 0% left.")
+                (LocaleKey::NotificationSessionDepletedBody, &provider_args)
             }
             NotificationType::SessionRestored => {
-                format!("{provider_name} session restored. Quota available again.")
+                (LocaleKey::NotificationSessionRestoredBody, &provider_args)
             }
-        }
+        };
+        locale::format_locale(language, key, args)
     }
 
     fn sound_event_for(notif_type: NotificationType) -> NotificationSoundEvent {
@@ -525,9 +536,9 @@ impl NotificationManager {
         description: &str,
         settings: &Settings,
     ) {
-        let title = NotificationType::StatusIssue.title();
+        let title = NotificationType::StatusIssue.title(settings.ui_language);
         let body = format!("{}: {}", provider.display_name(), description);
-        self.show_toast(title, &body);
+        self.show_toast(&title, &body);
         Self::play_notification_sound(NotificationSoundEvent::StatusIssue, settings);
     }
 
@@ -729,6 +740,51 @@ mod tests {
                 sound_event
             );
         }
+    }
+
+    #[test]
+    fn usage_toasts_follow_ui_language() {
+        use crate::settings::Language;
+
+        assert_eq!(
+            NotificationType::HighUsage.title(Language::English),
+            "High Usage Warning"
+        );
+        assert_eq!(
+            NotificationManager::notification_body(
+                ProviderId::Claude,
+                "weekly",
+                86.0,
+                NotificationType::HighUsage,
+                Language::English,
+            ),
+            "Claude weekly usage at 86% - approaching limit"
+        );
+        assert_eq!(
+            NotificationType::HighUsage.title(Language::Russian),
+            "Высокое использование"
+        );
+        assert_eq!(
+            NotificationManager::notification_body(
+                ProviderId::Claude,
+                "weekly",
+                86.0,
+                NotificationType::HighUsage,
+                Language::Russian,
+            ),
+            "Claude (неделя): использовано 86% — лимит почти исчерпан"
+        );
+        // Unknown windows pass through untranslated instead of falling back.
+        assert_eq!(
+            NotificationManager::notification_body(
+                ProviderId::Claude,
+                "opus",
+                100.0,
+                NotificationType::Exhausted,
+                Language::English,
+            ),
+            "Claude opus usage limit exhausted (100%)"
+        );
     }
 
     fn pace(will_last_to_reset: bool, eta_seconds: Option<f64>) -> UsagePace {
