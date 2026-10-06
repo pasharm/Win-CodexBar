@@ -18,6 +18,8 @@ describe("Language type", () => {
     const langPtBr: Language = "portuguesebrazil";
     expect(langTr).toBe("turkish");
     expect(langPtBr).toBe("portuguesebrazil");
+    const langUk: Language = "ukrainian";
+    expect(langUk).toBe("ukrainian");
   });
 
   it("allows 'spanish' in LocaleStrings payload", () => {
@@ -55,6 +57,13 @@ describe("Language type", () => {
     };
     expect(payloadTr.language).toBe("turkish");
     expect(payloadTr.entries.TabGeneral).toBe("Genel");
+
+    const payloadUk: LocaleStrings = {
+      language: "ukrainian",
+      entries: { TabGeneral: "Загальні" },
+    };
+    expect(payloadUk.language).toBe("ukrainian");
+    expect(payloadUk.entries.TabGeneral).toBe("Загальні");
   });
 
   it("allows 'spanish' in SettingsSnapshot.uiLanguage", () => {

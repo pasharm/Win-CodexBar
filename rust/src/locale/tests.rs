@@ -364,6 +364,22 @@ fn test_locale_key_turkish() {
 }
 
 #[test]
+fn test_locale_key_ukrainian() {
+    assert_eq!(
+        get_text(Language::Ukrainian, LocaleKey::TabGeneral),
+        "Загальні"
+    );
+    assert_eq!(
+        get_text(Language::Ukrainian, LocaleKey::InterfaceLanguage),
+        "Мова інтерфейсу"
+    );
+    assert_eq!(
+        get_text(Language::Ukrainian, LocaleKey::StartAtLogin),
+        "Запускати під час входу в систему"
+    );
+}
+
+#[test]
 fn test_locale_key_korean() {
     assert_eq!(get_text(Language::Korean, LocaleKey::TabGeneral), "일반");
     assert_eq!(
@@ -409,6 +425,10 @@ fn test_locale_respects_language_setting() {
     // Test that Turkish language returns Turkish strings
     let lang = Language::Turkish;
     assert_eq!(get_text(lang, LocaleKey::TabAbout), "Hakkında");
+
+    // Test that Ukrainian language returns Ukrainian strings
+    let lang = Language::Ukrainian;
+    assert_eq!(get_text(lang, LocaleKey::TabAbout), "Про програму");
 }
 
 #[test]
@@ -423,6 +443,7 @@ fn test_english_is_complete_and_other_languages_can_fallback() {
         ("pt-BR", include_str!("pt-BR.ftl")),
         ("ru-RU", include_str!("ru-RU.ftl")),
         ("tr-TR", include_str!("tr-TR.ftl")),
+        ("uk-UA", include_str!("uk-UA.ftl")),
     ];
 
     let resource_keys: Vec<(&str, HashSet<&str>)> = resources

@@ -89,6 +89,7 @@ function languageLocale(language: Language): string {
     portuguesebrazil: "pt-BR",
     russian: "ru-RU",
     turkish: "tr-TR",
+    ukrainian: "uk-UA",
   }[language];
 }
 

@@ -140,6 +140,7 @@ The UI and contributor reporting currently support:
 - Español mexicano
 - Português (Brasil)
 - Türkçe
+- Українська
 
 ## Build From Source
 

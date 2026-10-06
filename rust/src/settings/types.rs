@@ -102,6 +102,8 @@ pub enum Language {
     Russian,
     /// Turkish
     Turkish,
+    /// Ukrainian
+    Ukrainian,
 }
 
 impl Language {
@@ -117,6 +119,7 @@ impl Language {
             Language::PortugueseBrazil => "Português (Brasil)",
             Language::Russian => "Русский",
             Language::Turkish => "Türkçe",
+            Language::Ukrainian => "Українська",
         }
     }
 
@@ -132,6 +135,7 @@ impl Language {
             Language::PortugueseBrazil,
             Language::Russian,
             Language::Turkish,
+            Language::Ukrainian,
         ]
     }
 
@@ -148,6 +152,7 @@ impl Language {
             Language::PortugueseBrazil => "portuguesebrazil",
             Language::Russian => "russian",
             Language::Turkish => "turkish",
+            Language::Ukrainian => "ukrainian",
         }
     }
 
@@ -171,6 +176,7 @@ impl Language {
             ],
             Language::Russian => &["ru", "ru-ru", "русский"],
             Language::Turkish => &["tr", "tr-tr", "türkçe", "turkce"],
+            Language::Ukrainian => &["uk", "uk-ua", "українська"],
         }
     }
 

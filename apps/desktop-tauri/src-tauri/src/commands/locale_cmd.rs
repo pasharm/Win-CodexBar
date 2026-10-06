@@ -165,6 +165,17 @@ mod locale_tests {
     }
 
     #[test]
+    fn locale_strings_roundtrip_ukrainian() {
+        let bundle = locale_strings_for(Language::Ukrainian);
+        assert_eq!(bundle.language, "ukrainian");
+        assert_eq!(
+            bundle.entries.get("TabGeneral").map(String::as_str),
+            Some("Загальні")
+        );
+        assert_eq!(bundle.entries.len(), locale::LocaleKey::ALL.len());
+    }
+
+    #[test]
     fn locale_strings_roundtrip_brazilian_portuguese() {
         let bundle = locale_strings_for(Language::PortugueseBrazil);
         assert_eq!(bundle.language, "portuguesebrazil");
@@ -203,7 +214,8 @@ mod locale_tests {
                 "spanish",
                 "portuguesebrazil",
                 "russian",
-                "turkish"
+                "turkish",
+                "ukrainian"
             ]
         );
         assert_eq!(
@@ -217,7 +229,8 @@ mod locale_tests {
                 "Español",
                 "Português (Brasil)",
                 "Русский",
-                "Türkçe"
+                "Türkçe",
+                "Українська"
             ]
         );
     }
@@ -315,6 +328,14 @@ mod locale_tests {
         assert!(matches!(
             parse_locale_language("Türkçe"),
             Some(Language::Turkish)
+        ));
+        assert!(matches!(
+            parse_locale_language("uk-UA"),
+            Some(Language::Ukrainian)
+        ));
+        assert!(matches!(
+            parse_locale_language("Українська"),
+            Some(Language::Ukrainian)
         ));
         assert!(parse_locale_language("klingon").is_none());
     }

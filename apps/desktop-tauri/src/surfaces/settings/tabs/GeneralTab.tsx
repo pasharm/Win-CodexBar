@@ -28,6 +28,7 @@ const FALLBACK_LANGUAGE_OPTIONS: LanguageOption[] = [
   { value: "portuguesebrazil", display: "Português (Brasil)" },
   { value: "russian", display: "Русский" },
   { value: "turkish", display: "Türkçe" },
+  { value: "ukrainian", display: "Українська" },
 ];
 
 const REFRESH_CADENCE_OPTIONS: { value: string; labelKey: LocaleKey }[] = [
