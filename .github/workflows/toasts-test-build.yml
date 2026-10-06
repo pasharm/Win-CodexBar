@@ -1,0 +1,74 @@
+name: toasts test build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ci/toasts-all-build]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            rust
+            apps/desktop-tauri/src-tauri
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          package_json_file: apps/desktop-tauri/package.json
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.18.0
+          cache: pnpm
+          cache-dependency-path: apps/desktop-tauri/pnpm-lock.yaml
+
+      - name: Locale key drift
+        run: node apps/desktop-tauri/scripts/check-locale-drift.mjs
+
+      - name: Rust locale tests
+        run: cargo test --manifest-path rust/Cargo.toml locale
+
+      - name: Rust settings tests
+        run: cargo test --manifest-path rust/Cargo.toml settings
+
+      - name: Rust notification tests
+        run: cargo test --manifest-path rust/Cargo.toml notifications
+
+      - name: Tauri locale command tests
+        run: cargo test --manifest-path apps/desktop-tauri/src-tauri/Cargo.toml locale
+
+      - name: Rustfmt
+        run: cargo fmt --all -- --check
+
+      - name: Install frontend deps
+        run: pnpm --dir apps/desktop-tauri install --frozen-lockfile
+
+      - name: Frontend tests
+        run: pnpm --dir apps/desktop-tauri test
+
+      - name: Build app
+        run: pnpm --dir apps/desktop-tauri tauri:build
+
+      - name: Upload exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: codexbar-toasts
+          path: target/release/*.exe
+          retention-days: 7
